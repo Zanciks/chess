@@ -1,154 +1,172 @@
 fn main() {
-    let mut board = fen_to_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w HAkq - 0 1");
-    print_board(board);
-    move_from_uci(&mut board, "e2e4");
-    print_board(board);
+    let mut board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+    let new_move: Move = Move::new("e2e4");
+    board.print();
+    board.make_move(new_move);
+    board.print();
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 enum Piece {
-    Pawn, Knight, Bishop, Rook, Queen, King
+    Pawn(Color),
+    Knight(Color),
+    Bishop(Color),
+    Rook(Color),
+    Queen(Color),
+    King(Color),
+    None
+}
+
+#[derive(Copy, Clone, PartialEq)]
+enum Color {
+    White,
+    Black
 }
 
 #[derive(Copy, Clone)]
-enum Color {
-    White, Black
+struct Board {
+    pieces: [Piece; 64],
 }
 
-type Board = [(Option<Piece>, Option<Color>); 64];
+struct Coordinate {
+    file: usize,
+    rank: usize,
+}
 
-fn print_piece(piece: Piece, color: Color) {
-    match (piece, color) {
+struct Move {
+    from: Coordinate,
+    to: Coordinate,
+}
 
-        (Piece::Pawn, Color::White) => print!("P "),
-        (Piece::Knight, Color::White) => print!("N "),
-        (Piece::Bishop, Color::White) => print!("B "),
-        (Piece::Rook, Color::White) => print!("R "),
-        (Piece::Queen, Color::White) => print!("Q "),
-        (Piece::King, Color::White) => print!("K "),
+impl Board {
+    fn piece_at(self, x: usize, y: usize) -> Piece {
+        return self.pieces[x + 8*y];
+    }
+    fn new() -> Board {
+        let output_board: Board = Board { pieces: [Piece::None; 64] };
+        return output_board;
+    }
+    fn new_from_fen(fen: &str) -> Board {
+        let mut iter: usize = 0;
+        let mut output_board = Board::new();
 
-        (Piece::Pawn, Color::Black) => print!("p "),
-        (Piece::Knight, Color::Black) => print!("n "),
-        (Piece::Bishop, Color::Black) => print!("b "),
-        (Piece::Rook, Color::Black) => print!("r "),
-        (Piece::Queen, Color::Black) => print!("q "),
-        (Piece::King, Color::Black) => print!("k "),
+        for rank in fen.split("/") {
+            for c in rank.chars() {
+                match c {
+                    'P' => output_board.pieces[iter] = Piece::Pawn(Color::White),
+                    'N' => output_board.pieces[iter] = Piece::Knight(Color::White),
+                    'B' => output_board.pieces[iter] = Piece::Bishop(Color::White),
+                    'R' => output_board.pieces[iter] = Piece::Rook(Color::White),
+                    'Q' => output_board.pieces[iter] = Piece::Queen(Color::White),
+                    'K' => output_board.pieces[iter] = Piece::King(Color::White),
+
+                    'p' => output_board.pieces[iter] = Piece::Pawn(Color::Black),
+                    'n' => output_board.pieces[iter] = Piece::Knight(Color::Black),
+                    'b' => output_board.pieces[iter] = Piece::Bishop(Color::Black),
+                    'r' => output_board.pieces[iter] = Piece::Rook(Color::Black),
+                    'q' => output_board.pieces[iter] = Piece::Queen(Color::Black),
+                    'k' => output_board.pieces[iter] = Piece::King(Color::Black),
+
+                    '8' => for _ in 0..7 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '7' => for _ in 0..6 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '6' => for _ in 0..5 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '5' => for _ in 0..4 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '4' => for _ in 0..3 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '3' => for _ in 0..2 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '2' => for _ in 0..1 {output_board.pieces[iter] = Piece::None; iter += 1;},
+                    '1' => output_board.pieces[iter] = Piece::None,
+
+                    _ => break
+                }
+                output_board.pieces[iter].print();
+                print!(" {} ", iter);
+                println!("");
+                iter += 1;
+            }
+        }
+
+        return output_board;
+    }
+    fn print(self) {
+        for x in 0..8 {
+            println!("");
+            for y in 0..8 {
+                self.pieces[8*x + y].print();
+            }
+        }
+        println!("");
+    }
+    fn make_move(&mut self, var_move: Move) {
+        self.pieces[var_move.to.file + 8*var_move.to.rank] = self.pieces[var_move.from.file + 8*var_move.from.rank];
+        self.pieces[var_move.from.file + 8*var_move.from.rank] = Piece::None;
     }
 }
 
 impl Piece {
-    fn generate_moves(self, iter:usize, board: &mut Board) -> Vec<usize> {
+    fn print(self) {
         match self {
-            Piece::Pawn => vec![0],
-            Piece::Bishop => vec![0],
-            Piece::Knight => self.knight_squares(iter),
-            Piece::Rook => vec![0],
-            Piece::Queen => vec![0],
-            Piece::King => self.king_squares(iter, board),
+            Piece::None => print!(". "),
+
+            Piece::Pawn(Color::White) => print!("P "),
+            Piece::Knight(Color::White) => print!("N "),
+            Piece::Bishop(Color::White) => print!("B "),
+            Piece::Rook(Color::White) => print!("R "),
+            Piece::Queen(Color::White) => print!("Q "),
+            Piece::King(Color::White) => print!("K "),
+
+            Piece::Pawn(Color::Black) => print!("p "),
+            Piece::Knight(Color::Black) => print!("n "),
+            Piece::Bishop(Color::Black) => print!("b "),
+            Piece::Rook(Color::Black) => print!("r "),
+            Piece::Queen(Color::Black) => print!("q "),
+            Piece::King(Color::Black) => print!("k "),
         }
     }
-    fn knight_squares(self, iter: usize) -> Vec<usize> {
-        let output_vector: Vec<usize> = vec![iter + 10, iter + 17, iter + 15, iter + 6, iter - 10, iter - 17, iter - 15, iter - 6];
-        return output_vector;
-    }
-    fn king_squares(self, iter: usize, board: &mut Board) -> Vec<usize> {
-
-        let mut output_vector: Vec<usize> = vec![];
-        // manually adding all squares, because the king does not have many. This doesn't include castling.
-        if board[iter - 9].0 == None {output_vector.push(iter - 9);}
-        if board[iter - 8].0 == None {output_vector.push(iter - 8);}
-        if board[iter - 7].0 == None {output_vector.push(iter - 7);}
-        if board[iter - 1].0 == None {output_vector.push(iter - 1);}
-        if board[iter + 1].0 == None {output_vector.push(iter + 1);}
-        if board[iter + 7].0 == None {output_vector.push(iter + 7);}
-        if board[iter + 8].0 == None {output_vector.push(iter + 8);}
-        if board[iter + 9].0 == None {output_vector.push(iter + 9);}
-
-        return output_vector;
-    }
 }
 
-fn fen_to_board(fen: &str) -> Board {
-    let mut iter: usize = 0;
-    let mut board: Board = [(None, None); 64];
+impl Coordinate {
+    fn new(uci: &str) -> Coordinate {
+        let mut output_coordinate: Coordinate = Coordinate { file: 0, rank: 0 };
 
-    for rank in fen.split("/") {
-        for c in rank.chars() {
-            match c {
-                'P' => board[iter] = (Some(Piece::Pawn), Some(Color::White)),
-                'N' => board[iter] = (Some(Piece::Knight), Some(Color::White)),
-                'B' => board[iter] = (Some(Piece::Bishop), Some(Color::White)),
-                'R' => board[iter] = (Some(Piece::Rook), Some(Color::White)),
-                'Q' => board[iter] = (Some(Piece::Queen), Some(Color::White)),
-                'K' => board[iter] = (Some(Piece::King), Some(Color::White)),
-
-                'p' => board[iter] = (Some(Piece::Pawn), Some(Color::Black)),
-                'n' => board[iter] = (Some(Piece::Knight), Some(Color::Black)),
-                'b' => board[iter] = (Some(Piece::Bishop), Some(Color::Black)),
-                'r' => board[iter] = (Some(Piece::Rook), Some(Color::Black)),
-                'q' => board[iter] = (Some(Piece::Queen), Some(Color::Black)),
-                'k' => board[iter] = (Some(Piece::King), Some(Color::Black)),
-
-                '8' => for _ in 0..7 {board[iter] = (None, None); iter += 1;},
-                '7' => for _ in 0..6 {board[iter] = (None, None); iter += 1;},
-                '6' => for _ in 0..5 {board[iter] = (None, None); iter += 1;},
-                '5' => for _ in 0..4 {board[iter] = (None, None); iter += 1;},
-                '4' => for _ in 0..3 {board[iter] = (None, None); iter += 1;},
-                '3' => for _ in 0..2 {board[iter] = (None, None); iter += 1;},
-                '2' => for _ in 0..1 {board[iter] = (None, None); iter += 1;},
-                '1' => board[iter] = (None, None),
-
-                _ => break
-            }
-            iter += 1;
-        }}
-    return board;
-}
-
-fn print_board(board: Board) {
-    for x in 0..8 {
-        println!("");
-        for y in 0..8 {
-            let iter = 8*x + y;
-            if board[iter].0 == None {print!(". ")}
-            else {print_piece(board[iter].0.unwrap(), board[iter].1.unwrap());}
+        match uci[..1].to_uppercase().as_str() {
+            "A" => output_coordinate.file = 0,
+            "B" => output_coordinate.file = 1,
+            "C" => output_coordinate.file = 2,
+            "D" => output_coordinate.file = 3,
+            "E" => output_coordinate.file = 4,
+            "F" => output_coordinate.file = 5,
+            "G" => output_coordinate.file = 6,
+            "H" => output_coordinate.file = 7,
+            "X" => output_coordinate.file = 99,
+            _ => panic!("Not a UCI square!"),
         }
-    }
-    println!("");
-}
-
-fn square_to_iter(square: &str) -> usize {
-    let square = square.to_string().to_uppercase();
-    let rank: usize = square[1..2].parse::<usize>().unwrap();
-    let mut output: usize = 8 * (8 - rank);
-
-    match &square[..1] {
-        "A" => output += 0,
-        "B" => output += 1,
-        "C" => output += 2,
-        "D" => output += 3,
-        "E" => output += 4,
-        "F" => output += 5,
-        "G" => output += 6,
-        "H" => output += 7,
-        &_ => (),
-    }
-    return output;
-}
-
-fn move_from_uci(board: &mut Board, uci: &str) {
-    let square_from = square_to_iter(&uci[..2]);
-    let square_to = square_to_iter(&uci[2..4]);
-    let piece_from: Piece;
-
-    if board[square_from].0 != None {piece_from = board[square_from].0.unwrap();}
-    else {panic!("No piece at {}", square_from)}
-
-    for x in 0..piece_from.generate_moves(square_from, board).len() {
-        if square_to == piece_from.generate_moves(square_from, board)[x] {
-            board[square_to] = board[square_from];
-            board[square_from] = (None, None);
-            break;
+        match uci[1..2].to_uppercase().as_str() {
+            "1" => output_coordinate.rank = 7,
+            "2" => output_coordinate.rank = 6,
+            "3" => output_coordinate.rank = 5,
+            "4" => output_coordinate.rank = 4,
+            "5" => output_coordinate.rank = 3,
+            "6" => output_coordinate.rank = 2,
+            "7" => output_coordinate.rank = 1,
+            "8" => output_coordinate.rank = 0,
+            "X" => output_coordinate.rank = 99,
+            _ => panic!("Not a UCI square!"),
         }
+        return output_coordinate;
+    }
+}
+
+impl Move {
+    fn new(uci: &str) -> Move {
+        let mut output_move: Move = Move {from: Coordinate::new("xx"), to: Coordinate::new("xx")};
+
+        let from_coordinate: Coordinate = Coordinate::new(&uci[..2]);
+        let to_coordinate: Coordinate = Coordinate::new(&uci[2..4]);
+
+        output_move.from = from_coordinate;
+        output_move.to = to_coordinate;
+
+        return output_move;
     }
 }
